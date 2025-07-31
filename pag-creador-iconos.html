@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Creador de Iconos SVG</title>
+</head>
+<body>
+    <h1>Creador de Iconos SVG</h1>
+    <label>
+        Pega aquí tu código SVG:<br>
+        <textarea id="svg-input" rows="8" cols="50" placeholder="Pega solo el código SVG aquí"></textarea>
+    </label>
+    <br>
+    <label>Tamaño: <input type="number" id="size" value="64" min="16" max="512"> px</label>
+    <button id="download-svg">Descargar SVG</button>
+    <button id="download-png">Descargar PNG</button>
+    <div id="icon-preview" style="margin-top:20px;"></div>
+
+    <script>
+        let currentSVG = '';
+
+        function getSizedSVG(svgCode, size) {
+            let svg = svgCode.replace(/width="[^"]*"/, `width="${size}"`)
+                             .replace(/height="[^"]*"/, `height="${size}"`);
+            svg = svg.replace(/<svg([^>]*)>/, (match, p1) => {
+                if (!/width=/.test(match)) match = match.replace('<svg', `<svg width="${size}"`);
+                if (!/height=/.test(match)) match = match.replace('<svg', `<svg height="${size}"`);
+                if (!/xmlns=/.test(match)) match = match.replace('<svg', `<svg xmlns="http://www.w3.org/2000/svg"`);
+                return match;
+            });
+            return svg;
+        }
+
+        function updatePreview() {
+            const svgCode = document.getElementById('svg-input').value.trim();
+            const size = document.getElementById('size').value;
+            if (!svgCode) {
+                document.getElementById('icon-preview').innerHTML = '<em>Pega tu código SVG para ver el icono.</em>';
+                currentSVG = '';
+                return;
+            }
+            currentSVG = getSizedSVG(svgCode, size);
+            document.getElementById('icon-preview').innerHTML = currentSVG;
+        }
+
+        // Automatiza la vista previa al escribir, pegar o borrar
+        document.getElementById('svg-input').addEventListener('input', updatePreview);
+        document.getElementById('size').addEventListener('input', updatePreview);
+
+        // Descargar SVG
+        document.getElementById('download-svg').onclick = function() {
+            if (!currentSVG) return;
+            const blob = new Blob([currentSVG], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'icono.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        // Descargar PNG
+        document.getElementById('download-png').onclick = function() {
+            if (!currentSVG) return;
+            const size = parseInt(document.getElementById('size').value, 10);
+            const svg64 = btoa(unescape(encodeURIComponent(currentSVG)));
+            const img = new window.Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, size, size);
+                ctx.drawImage(img, 0, 0, size, size);
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = 'icono.png';
+                a.click();
+            };
+            img.onerror = function() {
+                alert('El SVG no es válido o no se pudo convertir a PNG.');
+            };
+            img.src = 'data:image/svg+xml;base64,' + svg64;
+        };
+
+        // Mensaje inicial
+        document.getElementById('icon-preview').innerHTML = '<em>Pega tu código SVG para ver el icono.</em>';
+    </script>
+</body>
+</html>
